@@ -17,10 +17,6 @@
 (define (sort-datapoints datapoints)
   (sort datapoints >= #:key cdr))
 
-;; sort indexed datapoints (name . (index . value)) by their values
-(define (sort-idx-datapoints datapoints)
-  (sort datapoints >= #:key caddr))
-
 (define (sort-dps dps)
   (sort dps >= #:key dp-value))
 
@@ -44,12 +40,6 @@
    ))
 
 ;; returns a function that draws a bar on the scale of the current graph
-(define (bar-drawer maxval)
-  (λ (name value)
-    (above
-     (bar/label (* (/ value maxval) MAX_WIDTH) (string->colour name) name)
-     (rectangle 0 10 "solid" "transparent"))))
-
 (define (bar-drawer-with-spacing maxval)
   (λ (dp)
     (define spacing
@@ -78,25 +68,6 @@
          (map x-axis-point (range 0 (* npoints scale) scale))
          (make-list npoints (* (/ scale maxval) MAX_WIDTH))
          (make-list npoints 0)))
-  
-
-(define (bargraph data)
-  (define maxval (apply max (dict-values data)))
-  (apply above/align "left"
-         (x-axis maxval)
-         (dict-map (take (sort-datapoints data) 15)
-                   (bar-drawer maxval))))
-
-;(define (bargraph-interp idxlist data)
-;  (define maxval (apply max (map cadr (dict-values data))))
-;  (above/align "left"
-;         (x-axis maxval)
-;         (foldr (λ (image1 image2) (overlay/align "left" "top" image1 image2))
-;                (rectangle 0 0 "solid" "transparent")
-;                (dict-map (filter
-;                           (λ (datapoint) (< (cadr datapoint) NBARS))
-;                           (sort-idx-datapoints data))
-;                          (bar-drawer-with-spacing maxval)))))
 
 (define (bargraph-interp data)
   (define maxval (apply max (map dp-value data)))
@@ -171,41 +142,11 @@
               (range INTERP_STEPS)))
        (range (length data))))
 
-;(define (next-frame t)
-;  (define-values (frame interp-step) (quotient/remainder t INTERP_STEPS))
-;  (define row-raw (list-ref data frame))
-;  (define date (car row-raw))
-;  (define row (map string->number (cdr row-raw)))
-;  (define next-row (map string->number (cdr (list-ref data (min (+ frame 1) (- (length data) 1))))))
-;  (define row-interp
-;    (map (λ (n1 n2)
-;           (interp n1 n2 (/ interp-step INTERP_STEPS)))
-;         row
-;         next-row))
-;  (define idx-interp
-;    (map (λ (i1 i2)
-;           (define better-i1
-;             (if (and (> i1 NBARS) (<= i2 NBARS))
-;                 NBARS
-;                 i1))
-;           (interp better-i1 i2 (/ interp-step INTERP_STEPS)))
-;         (get-indexes row)
-;         (get-indexes next-row)))
-;  (above/align "left"
-;   (text date 32 "black")
-;   (bargraph-interp idx-interp (row->idxdict idx-interp row-interp))))
 (define (next-frame t)
   (define row (list-ref interp-data t))
-  (write row)
   (define date (car (list-ref data (quotient t INTERP_STEPS))))
   (above/align "left"
    (text date 32 "black")
    (bargraph-interp row)))
 
 (animate next-frame)
-;(run-movie (/ 1 60) (map next-frame (range (- (* INTERP_STEPS (length data)) INTERP_STEPS))))
-                
-;(define test-data
-;  '(("abc" . 400) ("def" . 670) ("ghi" . 100)))
-
-;(bargraph test-data)
