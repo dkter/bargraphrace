@@ -93,10 +93,6 @@
 (define (row->dict row)
   (map cons users row))
 
-(define (row->idxdict indexes row)
-  (map list
-       users indexes row))
-
 (define (get-indexes row)
   (define sorted-names
     (map car (sort-datapoints (row->dict row))))
