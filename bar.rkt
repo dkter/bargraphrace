@@ -112,24 +112,30 @@
   (+ (* a (- 1 (interp-fn progress)))
      (* b (interp-fn progress))))
 
+(define (interp-row row1 row2 interp-step)
+  (map (λ (n1 n2)
+         (interp n1 n2 (/ interp-step INTERP_STEPS)))
+       row1 row2))
+
+(define (interp-index idxlist1 idxlist2 interp-step)
+  (map (λ (i1 i2)
+         (define better-i1
+           (if (and (> i1 NBARS) (<= i2 NBARS))
+               NBARS
+               i1))
+         (interp better-i1 i2 (/ interp-step INTERP_STEPS)))
+       idxlist1 idxlist2))
+
 (define (dp-row row-index interp-step)
   (define row-raw (list-ref data row-index))
-  (define row (map string->number (cdr row-raw)))
-  (define next-row (map string->number (cdr (list-ref data (min (+ row-index 1) (- (length data) 1))))))
+  (define row
+    (map string->number (cdr row-raw)))
+  (define next-row
+    (map string->number (cdr (list-ref data (min (+ row-index 1) (- (length data) 1))))))
   (define row-interp
-    (map (λ (n1 n2)
-           (interp n1 n2 (/ interp-step INTERP_STEPS)))
-         row
-         next-row))
+    (interp-row row next-row interp-step))
   (define idx-interp
-    (map (λ (i1 i2)
-           (define better-i1
-             (if (and (> i1 NBARS) (<= i2 NBARS))
-                 NBARS
-                 i1))
-           (interp better-i1 i2 (/ interp-step INTERP_STEPS)))
-         (get-indexes row)
-         (get-indexes next-row)))
+    (interp-index (get-indexes row) (get-indexes next-row) interp-step))
   (map dp users idx-interp row-interp))
 
 (define interp-data
