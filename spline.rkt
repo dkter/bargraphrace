@@ -3,7 +3,7 @@
 (require math/array)
 (require math/matrix)
 
-(define (cubic-spline xvals yvals)
+(define (get-spline-fns xvals yvals)
   (define fn (map list xvals yvals))
   (define npoints (length xvals))
   (define npolys (- npoints 1))
@@ -83,13 +83,39 @@
   (define b (build-matrix matrix-size 1
                           (λ (m n) (list-ref b-list m))))
 
-  (define coefficients (array->vector (matrix-solve a b)))
+  (array->vector (matrix-solve a b))
+)
 
-  ; return spline function
+(define (replace-duplicates lst)
+  ;; replaces duplicates in a list with groups of 2
+  ;; '(1 1 1 1 1 2 3 3 3 4 5 6)) -> '(1 1 2 3 3 4 5 6)
+  (for/list ([index (in-range (length lst))]
+             [i lst]
+             #:when (or (eq? index 0)
+                        (eq? index (- (length lst) 1))
+                        (not (eq? i (list-ref lst (- index 1))))
+                        (not (eq? i (list-ref lst (+ index 1))))))
+    i))
+
+(define (replace-y-duplicates xvals yvals)
+  (for/lists (xreplaced yreplaced)
+             ([index (in-range (length yvals))]
+              [x xvals]
+              [y yvals]
+              #:when (or (eq? index 0)
+                         (eq? index (- (length yvals) 1))
+                         (not (eq? y (list-ref yvals (- index 1))))
+                         (not (eq? y (list-ref yvals (+ index 1))))))
+    (values x y)))
+
+(define (cubic-spline xvals yvals)
+  (define-values (xopt yopt) (replace-y-duplicates xvals yvals))
+  (define coefficients (get-spline-fns xopt yopt))
+  
   (λ (x)
-    (define xpt-index (index-of xvals
+    (define xpt-index (index-of xopt
                                 (last (filter (λ (val) (<= val x))
-                                              (drop-right xvals 1)))))
+                                              (drop-right xopt 1)))))
     
     (define offset (* xpt-index 4))
     (+ (* (vector-ref coefficients offset) (expt x 3))
@@ -97,4 +123,4 @@
        (* (vector-ref coefficients (+ offset 2)) x)
        (vector-ref coefficients (+ offset 3)))))
 
-(provide (all-defined-out))
+(provide cubic-spline)
