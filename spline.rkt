@@ -86,26 +86,17 @@
   (array->vector (matrix-solve a b))
 )
 
-(define (replace-duplicates lst)
-  ;; replaces duplicates in a list with groups of 2
-  ;; '(1 1 1 1 1 2 3 3 3 4 5 6)) -> '(1 1 2 3 3 4 5 6)
-  (for/list ([index (in-range (length lst))]
-             [i lst]
-             #:when (or (eq? index 0)
-                        (eq? index (- (length lst) 1))
-                        (not (eq? i (list-ref lst (- index 1))))
-                        (not (eq? i (list-ref lst (+ index 1))))))
-    i))
-
 (define (replace-y-duplicates xvals yvals)
+  ;; replaces duplicates in the y values with groups of 2
+  ;; '(1 1 1 1 1 2 3 3 3 4 5 6)) -> '(1 1 2 3 3 4 5 6)
   (for/lists (xreplaced yreplaced)
              ([index (in-range (length yvals))]
               [x xvals]
               [y yvals]
-              #:when (or (eq? index 0)
-                         (eq? index (- (length yvals) 1))
-                         (not (eq? y (list-ref yvals (- index 1))))
-                         (not (eq? y (list-ref yvals (+ index 1))))))
+              #:when (or (zero? 0)
+                         (= index (sub1 (length yvals)))
+                         (not (= y (list-ref yvals (sub1 index))))
+                         (not (= y (list-ref yvals (add1 index))))))
     (values x y)))
 
 (define (cubic-spline xvals yvals)
