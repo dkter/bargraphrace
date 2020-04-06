@@ -85,6 +85,7 @@
 
   (define coefficients (array->vector (matrix-solve a b)))
 
+  ; return spline function
   (λ (x)
     (define xpt-index (index-of xvals
                                 (last (filter (λ (val) (<= val x))
@@ -95,3 +96,5 @@
        (* (vector-ref coefficients (+ offset 1)) (expt x 2))
        (* (vector-ref coefficients (+ offset 2)) x)
        (vector-ref coefficients (+ offset 3)))))
+
+(provide (all-defined-out))

@@ -3,6 +3,7 @@
 (require 2htdp/image)
 (require 2htdp/universe)
 (require csv-reading)
+(require "spline.rkt")
 
 (define BAR_HEIGHT 25)
 (define BAR_SPACING 5)
@@ -90,6 +91,17 @@
 (define data
   (csv->list next-row))
 
+(define xvals
+  (range (length data)))
+
+(define splines
+  (for/list ([i (in-range (length users))]
+             [user users])
+    (define yvals
+      (map (λ (row) (string->number (list-ref row (+ i 1))))
+           data))
+    (cubic-spline xvals yvals)))
+
 (define (row->dict row)
   (map cons users row))
 
@@ -112,10 +124,10 @@
   (+ (* a (- 1 (interp-fn progress)))
      (* b (interp-fn progress))))
 
-(define (interp-row row1 row2 interp-step)
-  (map (λ (n1 n2)
-         (interp n1 n2 (/ interp-step INTERP_STEPS)))
-       row1 row2))
+(define (interp-row row-index interp-step)
+  (for/list ([i (in-range (length users))])
+    (define fn (list-ref splines i))
+    (fn (+ row-index (/ interp-step INTERP_STEPS)))))
 
 (define (interp-index idxlist1 idxlist2 interp-step)
   (map (λ (i1 i2)
@@ -133,7 +145,7 @@
   (define next-row
     (map string->number (cdr (list-ref data (min (+ row-index 1) (- (length data) 1))))))
   (define row-interp
-    (interp-row row next-row interp-step))
+    (interp-row row-index interp-step))
   (define idx-interp
     (interp-index (get-indexes row) (get-indexes next-row) interp-step))
   (map dp users idx-interp row-interp))
