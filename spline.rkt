@@ -116,11 +116,16 @@
     (define xpt-index (index-of xopt
                                 (last (filter (λ (val) (<= val x))
                                               (drop-right xopt 1)))))
-    
     (define offset (* xpt-index 4))
-    (+ (* (vector-ref coefficients offset) (expt x 3))
-       (* (vector-ref coefficients (+ offset 1)) (expt x 2))
-       (* (vector-ref coefficients (+ offset 2)) x)
-       (vector-ref coefficients (+ offset 3)))))
+    
+    ; this check is to make sure we don't keep using the splines
+    ; once we're out of the domain of the entire thing (the function
+    ; should continue to return the last y value
+    (if (>= x (last xopt))
+        (last yopt)
+        (+ (* (vector-ref coefficients offset) (expt x 3))
+           (* (vector-ref coefficients (+ offset 1)) (expt x 2))
+           (* (vector-ref coefficients (+ offset 2)) x)
+           (vector-ref coefficients (+ offset 3))))))
 
 (provide cubic-spline)
