@@ -86,22 +86,69 @@
   (array->vector (matrix-solve a b))
 )
 
+(define (straight-line y)
+  ;; a straight line represented by ax^3 + bx^2 + cx + d
+  (vector 0 0 0 y))
+
+;(define (separate-duplicates lst)
+ ; ;; '(1 1 1 1 1 2 3 3 3 4 5 6) -> '((1 1 1 1 1) (1 2 3) (3 3 3) (3 4 5 6))
+  ;(for/fold ([groups '()]
+   ;          [i (last lst)]
+             
+
+
+(define (vector-flatten lv)
+  (apply vector-append lv))
+
+
+; separate pairs from things that need to be splined
+; go through list, generate straight line or spline
+; combine into flat list
+(define (get-fns xvals yvals)
+  (define len (length yvals))
+  (define-values (fns _)
+    (for/fold ([fns '()]
+               [start-index 0])
+              ([_ (in-range +inf.0)]
+               #:break (= start-index (sub1 len)))
+      (define lst-tail (drop yvals start-index))
+      (define val (first lst-tail))
+      (define straight-line? (= val (second lst-tail)))
+      (define end-index
+        (for/fold ([end-index 0])
+                  ([end-val (in-list (rest lst-tail))]
+                   #:break (if straight-line?
+                               (not (= val end-val))
+                               (= val end-val)))
+          (set! val end-val)
+          (add1 end-index)))
+      
+      (values
+       (if straight-line?
+           (append fns (make-list end-index (straight-line val)))
+           (append fns (list (get-spline-fns
+                              (take (drop xvals start-index) (add1 end-index))
+                              (take lst-tail (add1 end-index))))))
+       (+ start-index end-index))))
+  (vector-flatten fns))
+
 (define (replace-y-duplicates xvals yvals)
   ;; replaces duplicates in the y values with groups of 2
   ;; '(1 1 1 1 1 2 3 3 3 4 5 6)) -> '(1 1 2 3 3 4 5 6)
+  (define len (length yvals))
   (for/lists (xreplaced yreplaced)
-             ([index (in-range (length yvals))]
+             ([index (in-range len)]
               [x xvals]
               [y yvals]
               #:when (or (zero? 0)
-                         (= index (sub1 (length yvals)))
+                         (= index (sub1 len))
                          (not (= y (list-ref yvals (sub1 index))))
                          (not (= y (list-ref yvals (add1 index))))))
     (values x y)))
 
 (define (cubic-spline xvals yvals)
   (define-values (xopt yopt) (replace-y-duplicates xvals yvals))
-  (define coefficients (get-spline-fns xopt yopt))
+  (define coefficients (get-fns xopt yopt))
   
   (λ (x)
     (define xpt-index (index-of xopt
