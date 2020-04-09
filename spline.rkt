@@ -132,35 +132,20 @@
        (+ start-index end-index))))
   (vector-flatten fns))
 
-(define (replace-y-duplicates xvals yvals)
-  ;; replaces duplicates in the y values with groups of 2
-  ;; '(1 1 1 1 1 2 3 3 3 4 5 6)) -> '(1 1 2 3 3 4 5 6)
-  (define len (length yvals))
-  (for/lists (xreplaced yreplaced)
-             ([index (in-range len)]
-              [x xvals]
-              [y yvals]
-              #:when (or (zero? 0)
-                         (= index (sub1 len))
-                         (not (= y (list-ref yvals (sub1 index))))
-                         (not (= y (list-ref yvals (add1 index))))))
-    (values x y)))
-
 (define (cubic-spline xvals yvals)
-  (define-values (xopt yopt) (replace-y-duplicates xvals yvals))
-  (define coefficients (get-fns xopt yopt))
+  (define coefficients (get-fns xvals yvals))
   
   (λ (x)
-    (define xpt-index (index-of xopt
+    (define xpt-index (index-of xvals
                                 (last (filter (λ (val) (<= val x))
-                                              (drop-right xopt 1)))))
+                                              (drop-right xvals 1)))))
     (define offset (* xpt-index 4))
     
     ; this check is to make sure we don't keep using the splines
     ; once we're out of the domain of the entire thing (the function
     ; should continue to return the last y value
-    (if (>= x (last xopt))
-        (last yopt)
+    (if (>= x (last xvals))
+        (last yvals)
         (+ (* (vector-ref coefficients offset) (expt x 3))
            (* (vector-ref coefficients (+ offset 1)) (expt x 2))
            (* (vector-ref coefficients (+ offset 2)) x)
