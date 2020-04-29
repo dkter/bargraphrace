@@ -8,7 +8,7 @@
 (define BAR_HEIGHT 25)
 (define BAR_SPACING 5)
 (define MAX_WIDTH 500)
-(define INTERP_STEPS 10)
+(define INTERP_STEPS 20)
 (define INTERP_SMOOTH_EXPT 3)
 (define NBARS 15)
 
@@ -163,4 +163,7 @@
    (text date 32 "black")
    (bargraph-interp row)))
 
-(animate next-frame)
+(big-bang 0
+  (on-tick add1 1/60 (sub1 (length interp-data)))
+  (to-draw next-frame)
+  (record? #t))
