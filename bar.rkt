@@ -81,37 +81,6 @@
                            (λ (datapoint) (< (dp-index datapoint) NBARS))
                            (sort-dps data))))))
 
-
-(define next-row
-  (make-csv-reader (open-input-file "testing.csv")))
-
-(define users
-  (cdr (next-row)))
-
-(define data
-  (csv->list next-row))
-
-(define xvals
-  (range (length data)))
-
-(define splines
-  (for/list ([i (in-range (length users))]
-             [user users])
-    (define yvals
-      (map (λ (row) (string->number (list-ref row (+ i 1))))
-           data))
-    (cubic-spline xvals yvals)))
-
-(define (row->dict row)
-  (map cons users row))
-
-(define (get-indexes row)
-  (define sorted-names
-    (map car (sort-datapoints (row->dict row))))
-  (map
-   (λ (name) (index-of sorted-names name))
-   users))
-
 (define (interp-fn progress)
   (if (<= progress 0.5)
       (* (expt 2 (- INTERP_SMOOTH_EXPT 1))
@@ -124,46 +93,80 @@
   (+ (* a (- 1 (interp-fn progress)))
      (* b (interp-fn progress))))
 
-(define (interp-row row-index interp-step)
-  (for/list ([i (in-range (length users))])
-    (define fn (list-ref splines i))
-    (fn (+ row-index (/ interp-step INTERP_STEPS)))))
-
-(define (interp-index idxlist1 idxlist2 interp-step)
-  (map (λ (i1 i2)
-         (define better-i1
-           (if (and (> i1 NBARS) (<= i2 NBARS))
-               NBARS
-               i1))
-         (interp better-i1 i2 (/ interp-step INTERP_STEPS)))
-       idxlist1 idxlist2))
-
-(define (dp-row row-index interp-step)
-  (define row-raw (list-ref data row-index))
-  (define row
-    (map string->number (cdr row-raw)))
+(define (make-bar-graph-race datafile)
   (define next-row
-    (map string->number (cdr (list-ref data (min (+ row-index 1) (- (length data) 1))))))
-  (define row-interp
-    (interp-row row-index interp-step))
-  (define idx-interp
-    (interp-index (get-indexes row) (get-indexes next-row) interp-step))
-  (map dp users idx-interp row-interp))
+    (make-csv-reader (open-input-file datafile)))
 
-(define interp-data
-  (append-map (λ (row-index)
-         (map (λ (interp-step) (dp-row row-index interp-step))
-              (range INTERP_STEPS)))
-       (range (length data))))
+  (define users
+    (cdr (next-row)))
 
-(define (next-frame t)
-  (define row (list-ref interp-data t))
-  (define date (car (list-ref data (quotient t INTERP_STEPS))))
-  (above/align "left"
-   (text date 32 "black")
-   (bargraph-interp row)))
+  (define data
+    (csv->list next-row))
 
-(big-bang 0
-  (on-tick add1 1/60 (sub1 (length interp-data)))
-  (to-draw next-frame)
-  (record? #t))
+  (define xvals
+    (range (length data)))
+
+  (define splines
+    (for/list ([i (in-range (length users))]
+               [user users])
+      (define yvals
+        (map (λ (row) (string->number (list-ref row (+ i 1))))
+             data))
+      (cubic-spline xvals yvals)))
+
+  (define (row->dict row)
+    (map cons users row))
+
+  (define (get-indexes row)
+    (define sorted-names
+      (map car (sort-datapoints (row->dict row))))
+    (map
+     (λ (name) (index-of sorted-names name))
+     users))
+
+  (define (interp-row row-index interp-step)
+    (for/list ([i (in-range (length users))])
+      (define fn (list-ref splines i))
+      (fn (+ row-index (/ interp-step INTERP_STEPS)))))
+
+  (define (interp-index idxlist1 idxlist2 interp-step)
+    (map (λ (i1 i2)
+           (define better-i1
+             (if (and (> i1 NBARS) (<= i2 NBARS))
+                 NBARS
+                 i1))
+           (interp better-i1 i2 (/ interp-step INTERP_STEPS)))
+         idxlist1 idxlist2))
+
+  (define (dp-row row-index interp-step)
+    (define row-raw (list-ref data row-index))
+    (define row
+      (map string->number (cdr row-raw)))
+    (define next-row
+      (map string->number (cdr (list-ref data (min (+ row-index 1) (- (length data) 1))))))
+    (define row-interp
+      (interp-row row-index interp-step))
+    (define idx-interp
+      (interp-index (get-indexes row) (get-indexes next-row) interp-step))
+    (map dp users idx-interp row-interp))
+
+  (define interp-data
+    (append-map (λ (row-index)
+                  (map (λ (interp-step) (dp-row row-index interp-step))
+                       (range INTERP_STEPS)))
+                (range (length data))))
+
+  (define (next-frame t)
+    (define frame (min t (sub1 (length interp-data))))
+    (define row (list-ref interp-data frame))
+    (define date (car (list-ref data (quotient frame INTERP_STEPS))))
+    (above/align "left"
+                 (text date 32 "black")
+                 (bargraph-interp row)))
+
+  (big-bang 0
+    (on-tick add1 1/60 (length interp-data))
+    (to-draw next-frame)
+    (record? "animation")))
+
+(provide make-bar-graph-race)
